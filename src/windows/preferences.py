@@ -37,6 +37,7 @@ from qt_api import (
     QVBoxLayout, QHBoxLayout, QSizePolicy,
     QScrollArea, QLabel, QLineEdit, QPushButton,
     QDoubleSpinBox, QComboBox, QCheckBox, QSpinBox, QStyle,
+    QApplication,
 )
 from qt_api import QKeySequence, QIcon
 
@@ -46,6 +47,7 @@ from classes.app import get_app
 from classes.language import get_all_languages
 from classes.logger import log
 from classes.metrics import track_metric_screen
+from classes import aws_credentials
 
 import openshot
 
@@ -68,7 +70,7 @@ class Preferences(QDialog):
         ui_util.init_ui(self)
 
         # Define the custom category order
-        self.custom_order = ["General", "Timeline", "Preview", "Autosave", "Cache", "Performance", "Keyboard", "Location", "Advanced"]
+        self.custom_order = ["General", "Timeline", "Preview", "Autosave", "Cache", "Performance", "AI Agent", "Keyboard", "Location", "Advanced"]
 
         # Get settings
         self.s = get_app().get_settings()
@@ -281,14 +283,23 @@ class Preferences(QDialog):
                     widget.setToolTip(param["title"])
                     widget.valueChanged.connect(functools.partial(self.spinner_value_changed, param))
 
-                elif param["type"] == "text" or param["type"] == "browse":
+                elif param["type"] == "text" or param["type"] == "browse" or param["type"] == "password":
                     # create QLineEdit
                     widget = QLineEdit()
                     widget.setText(_(param["value"]))
                     widget.setObjectName(param["setting"])
                     widget.textChanged.connect(functools.partial(self.text_value_changed, widget, param))
 
-                    if param["type"] == "browse":
+                    if param["type"] == "password":
+                        # Mask sensitive values (e.g. AWS secret keys) and offer a show/hide toggle.
+                        echo_enum = getattr(QLineEdit, "EchoMode", QLineEdit)
+                        widget.setEchoMode(getattr(echo_enum, "Password", getattr(QLineEdit, "Password", 2)))
+                        extraWidget = QPushButton(_("Show"))
+                        extraWidget.setCheckable(True)
+                        extraWidget.toggled.connect(
+                            functools.partial(self.toggle_password_visibility, widget, extraWidget)
+                        )
+                    elif param["type"] == "browse":
                         # Add filesystem browser button
                         extraWidget = QPushButton(_("Browse..."))
                         extraWidget.clicked.connect(functools.partial(self.selectExecutable, widget, param))
@@ -297,6 +308,12 @@ class Preferences(QDialog):
                         extraWidget = QPushButton(_("Check"))
                         extraWidget.clicked.connect(
                             functools.partial(self.check_comfy_ui_url, widget, param, extraWidget)
+                        )
+                    elif param.get("setting") == "agentcore-harness-arn":
+                        # Add an explicit AWS credentials/connectivity check.
+                        extraWidget = QPushButton(_("Test Connection"))
+                        extraWidget.clicked.connect(
+                            functools.partial(self.check_aws_connection, extraWidget)
                         )
 
                 elif param["type"] == "bool":
@@ -862,6 +879,55 @@ class Preferences(QDialog):
         btn.setEnabled(bool(enabled))
         if pending is not None:
             btn.setProperty("comfy_check_pending", bool(pending))
+
+    def toggle_password_visibility(self, widget, btn, checked):
+        """Toggle a masked QLineEdit (e.g. AWS secret key) between hidden/visible text."""
+        _ = get_app()._tr
+        echo_enum = getattr(QLineEdit, "EchoMode", QLineEdit)
+        if checked:
+            widget.setEchoMode(getattr(echo_enum, "Normal", getattr(QLineEdit, "Normal", 0)))
+            btn.setText(_("Hide"))
+        else:
+            widget.setEchoMode(getattr(echo_enum, "Password", getattr(QLineEdit, "Password", 2)))
+            btn.setText(_("Show"))
+
+    def check_aws_connection(self, btn=None):
+        """Validate the currently configured AWS credentials/settings by calling STS.
+
+        All credentials come from the user's own Preferences (never hard-coded),
+        so this works with any AWS account the user configures.
+        """
+        _ = get_app()._tr
+
+        if btn:
+            btn.setEnabled(False)
+            btn.setText(_("Testing..."))
+            btn.setIcon(QIcon())
+        QApplication.processEvents()
+
+        try:
+            success, message = aws_credentials.test_connection()
+        except Exception as ex:
+            success, message = False, str(ex)
+
+        if btn:
+            icon = self.style().standardIcon(
+                QStyle.SP_DialogApplyButton if success else QStyle.SP_DialogCancelButton
+            )
+            btn.setIcon(icon)
+            btn.setText(_("Test Connection"))
+            btn.setToolTip(message)
+            btn.setEnabled(True)
+
+        QMessageBox.information(
+            self,
+            _("AWS Connection Test"),
+            message,
+        ) if success else QMessageBox.warning(
+            self,
+            _("AWS Connection Test"),
+            message,
+        )
 
     def dropdown_index_changed(self, widget, param, index):
         # Save setting

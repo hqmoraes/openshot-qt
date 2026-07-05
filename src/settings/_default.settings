@@ -516,6 +516,100 @@
     "setting": "comfy-ui-url"
   },
   {
+    "value": false,
+    "title": "Enable AI Video Editing Agent",
+    "type": "bool",
+    "category": "AI Agent",
+    "setting": "aws-agent-enabled",
+    "restart": false
+  },
+  {
+    "value": "default_chain",
+    "title": "Authentication Method",
+    "type": "dropdown",
+    "category": "AI Agent",
+    "setting": "aws-auth-mode",
+    "dependency": "aws-agent-enabled",
+    "restart": false,
+    "values": [
+      {
+        "value": "default_chain",
+        "name": "Default Credential Chain (env vars, ~/.aws, IAM role)"
+      },
+      {
+        "value": "profile",
+        "name": "Named AWS Profile"
+      },
+      {
+        "value": "access_keys",
+        "name": "Access Key / Secret Key"
+      }
+    ]
+  },
+  {
+    "value": "",
+    "title": "AWS Profile Name",
+    "type": "text",
+    "category": "AI Agent",
+    "setting": "aws-profile-name",
+    "dependency": "aws-agent-enabled",
+    "restart": false
+  },
+  {
+    "value": "",
+    "title": "AWS Access Key ID",
+    "type": "password",
+    "category": "AI Agent",
+    "setting": "aws-access-key-id",
+    "dependency": "aws-agent-enabled",
+    "restart": false
+  },
+  {
+    "value": "",
+    "title": "AWS Secret Access Key",
+    "type": "password",
+    "category": "AI Agent",
+    "setting": "aws-secret-access-key",
+    "dependency": "aws-agent-enabled",
+    "restart": false
+  },
+  {
+    "value": "",
+    "title": "AWS Session Token (optional)",
+    "type": "password",
+    "category": "AI Agent",
+    "setting": "aws-session-token",
+    "dependency": "aws-agent-enabled",
+    "restart": false
+  },
+  {
+    "value": "us-east-1",
+    "title": "AWS Region",
+    "type": "text",
+    "category": "AI Agent",
+    "setting": "aws-region",
+    "dependency": "aws-agent-enabled",
+    "restart": false
+  },
+  {
+    "value": "us.anthropic.claude-3-5-sonnet-20241022-v2:0",
+    "title": "Bedrock Model ID",
+    "type": "text",
+    "category": "AI Agent",
+    "setting": "bedrock-model-id",
+    "dependency": "aws-agent-enabled",
+    "restart": false
+  },
+  {
+    "value": "",
+    "title": "AgentCore Harness/Agent ARN (optional)",
+    "type": "text",
+    "category": "AI Agent",
+    "setting": "agentcore-harness-arn",
+    "dependency": "aws-agent-enabled",
+    "restart": false
+  },
+  {
     "min": 0,
     "max": 9999,
     "value": 5556,

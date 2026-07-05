@@ -83,6 +83,7 @@ from windows.models.transition_model import TransitionsModel
 from windows.preview_thread import PreviewParent
 from windows.scope_panel import WaveformDockContent, HistogramDockContent, VectorscopeDockContent, AudioMeterWidget
 from windows.video_widget import VideoWidget
+from windows.views.ai_chat_panel import AIChatPanel
 from windows.views.effects_listview import EffectsListView
 from windows.views.effects_treeview import EffectsTreeView
 from windows.views.emojis_listview import EmojisListView
@@ -244,6 +245,10 @@ class MainWindow(updates.UpdateWatcher, QMainWindow):
             self.generation_service.cleanup_temp_files()
         if getattr(self, "proxy_service", None):
             self.proxy_service.shutdown()
+
+        # Stop AI agent background thread (if any)
+        if getattr(self, "ai_chat_panel", None):
+            self.ai_chat_panel.shutdown()
 
         # Stop ZMQ polling thread (if any)
         if app.logger_libopenshot:
@@ -5196,6 +5201,14 @@ class MainWindow(updates.UpdateWatcher, QMainWindow):
         self.dockAudio.setWidget(self.audio_meter)
         self.dockAudio.hide()
         self.addDockWidget(Qt.RightDockWidgetArea, self.dockAudio)
+
+        # AI Video Editing Agent chat panel
+        self.ai_chat_panel = AIChatPanel(self)
+        self.dockAIChat = QDockWidget(_("AI Video Agent"), self)
+        self.dockAIChat.setObjectName("dockAIChat")
+        self.dockAIChat.setWidget(self.ai_chat_panel)
+        self.dockAIChat.hide()
+        self.addDockWidget(Qt.RightDockWidgetArea, self.dockAIChat)
 
         # Add Docks submenu to View menu
         self.addViewDocksMenu()

@@ -16,3 +16,11 @@ openshot_qt/
 /src/images/cache/objectdetection.png
 /src/images/cache/objectdetection@2x.png
 doc/locale/.doctrees/
+
+# Local dev/test tooling (Python venvs, extracted installer, downloaded
+# tools) - not part of the project, safe to regenerate. See
+# /memories/repo/openshot-qt-setup.md for how these were built.
+.venv/
+.venv38/
+vendor/
+
