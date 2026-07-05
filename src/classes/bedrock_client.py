@@ -90,17 +90,21 @@ class BedrockAgentWorker(QObject):
 
     @pyqtSlot(str)
     def send_message(self, user_text):
+        log.info("AI agent: send_message received on worker thread")
         try:
             self._run_turn(user_text)
         except aws_credentials.AwsCredentialsError as ex:
+            log.warning("AI agent: credentials error: %s", ex)
             self.error_occurred.emit(str(ex))
         except Exception as ex:
             log.error("Bedrock agent turn failed", exc_info=True)
             self.error_occurred.emit(str(ex))
 
     def _run_turn(self, user_text):
+        log.info("AI agent: turn starting (message length=%d)", len(user_text or ""))
         settings = aws_credentials.get_aws_settings()
         if not settings["enabled"]:
+            log.warning("AI agent: disabled in settings, aborting turn")
             self.error_occurred.emit(
                 "The AI Video Editing Agent is disabled. Enable it in "
                 "Preferences > AI Agent and configure your AWS credentials first."
@@ -108,6 +112,7 @@ class BedrockAgentWorker(QObject):
             return
 
         model_id = str(get_app().get_settings().get("bedrock-model-id") or "").strip() or DEFAULT_MODEL_ID
+        log.info("AI agent: using model_id=%s auth_mode=%s region=%s", model_id, settings.get("auth_mode"), settings.get("region"))
 
         session = aws_credentials.build_boto3_session(settings)
         client = session.client("bedrock-runtime")
@@ -116,7 +121,8 @@ class BedrockAgentWorker(QObject):
         tool_config = agent_tools.to_bedrock_tool_config()
         system_prompts = [{"text": SYSTEM_PROMPT}]
 
-        for _ in range(MAX_TOOL_ITERATIONS):
+        for iteration in range(MAX_TOOL_ITERATIONS):
+            log.info("AI agent: calling bedrock-runtime.converse (iteration %d)", iteration + 1)
             response = client.converse(
                 modelId=model_id,
                 system=system_prompts,
@@ -126,6 +132,7 @@ class BedrockAgentWorker(QObject):
             output_message = response["output"]["message"]
             self.messages.append(output_message)
             stop_reason = response.get("stopReason")
+            log.info("AI agent: converse returned stopReason=%s", stop_reason)
 
             if stop_reason != "tool_use":
                 self.turn_finished.emit(_extract_text(output_message))

@@ -138,6 +138,7 @@ class AIChatPanel(QWidget):
         self._append_user_message(text)
         self._set_busy(True)
         self._response_timer.start(RESPONSE_TIMEOUT_MS)
+        log.info("AI agent: send_clicked - dispatching message to session")
         try:
             self.ensure_session().send_message(text)
         except Exception as ex:

@@ -38,7 +38,6 @@ import os
 import threading
 import uuid
 
-import openshot
 from qt_api import QObject, Qt, pyqtSignal, QUrl
 
 from classes.app import get_app
@@ -177,6 +176,8 @@ class AgentBridge(QObject):
         return {"file_id": imported.id, "name": imported.data.get("name")}
 
     def _tool_add_clip(self, file_id, position, layer, start=None, end=None):
+        import openshot
+
         file_obj = File.get(id=file_id)
         if not file_obj:
             return {"error": "Unknown file_id: {}".format(file_id)}
@@ -255,6 +256,8 @@ class AgentBridge(QObject):
         return {"track_id": track.id, "number": track_number}
 
     def _tool_list_available_effects(self):
+        import openshot
+
         raw = json.loads(openshot.EffectInfo.Json())
         effects = [
             {
@@ -267,6 +270,8 @@ class AgentBridge(QObject):
         return {"effects": effects}
 
     def _tool_add_effect(self, clip_id, effect_name):
+        import openshot
+
         clip = Clip.get(id=clip_id)
         if not clip:
             return {"error": "Unknown clip_id: {}".format(clip_id)}
