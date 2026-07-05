@@ -5207,6 +5207,9 @@ class MainWindow(updates.UpdateWatcher, QMainWindow):
         self.dockAIChat = QDockWidget(_("AI Video Agent"), self)
         self.dockAIChat.setObjectName("dockAIChat")
         self.dockAIChat.setWidget(self.ai_chat_panel)
+        # Ensure the custom dock title bar has enough room to show the full
+        # title without clipping it (this title is longer than most others).
+        self.dockAIChat.setMinimumWidth(260)
         self.dockAIChat.hide()
         self.addDockWidget(Qt.RightDockWidgetArea, self.dockAIChat)
 
