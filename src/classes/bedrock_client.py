@@ -46,7 +46,7 @@ from classes.app import get_app
 from classes.logger import log
 from classes import aws_credentials
 
-DEFAULT_MODEL_ID = "us.anthropic.claude-3-5-sonnet-20241022-v2:0"
+DEFAULT_MODEL_ID = "us.anthropic.claude-sonnet-4-5-20250929-v1:0"
 MAX_TOOL_ITERATIONS = 12
 
 SYSTEM_PROMPT = (
