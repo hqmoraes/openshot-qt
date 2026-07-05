@@ -27,12 +27,17 @@
 import html
 
 from qt_api import (
-    Qt, QWidget, QVBoxLayout, QHBoxLayout,
+    Qt, QWidget, QVBoxLayout, QHBoxLayout, QTimer,
     QTextEdit, QLineEdit, QPushButton, QLabel, QSizePolicy,
 )
 
 from classes.app import get_app
 from classes.logger import log
+
+# Safety net: if the agent never responds (network hang, dead thread, etc.)
+# don't leave the input permanently disabled - time out and let the user
+# try again.
+RESPONSE_TIMEOUT_MS = 90_000
 
 
 class AIChatPanel(QWidget):
@@ -41,6 +46,9 @@ class AIChatPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.session = None
+        self._response_timer = QTimer(self)
+        self._response_timer.setSingleShot(True)
+        self._response_timer.timeout.connect(self._on_response_timeout)
 
         _ = get_app()._tr
 
@@ -105,6 +113,9 @@ class AIChatPanel(QWidget):
         self.chat_log.clear()
         _ = get_app()._tr
         self._append_system_message(_("Started a new conversation."))
+        # Always leave the input usable, even if a previous request never
+        # came back (e.g. a network hang) and left us stuck in 'busy'.
+        self._set_busy(False)
 
     # ------------------------------------------------------------------
     # UI actions
@@ -126,6 +137,7 @@ class AIChatPanel(QWidget):
         self.input_line.clear()
         self._append_user_message(text)
         self._set_busy(True)
+        self._response_timer.start(RESPONSE_TIMEOUT_MS)
         try:
             self.ensure_session().send_message(text)
         except Exception as ex:
@@ -138,16 +150,29 @@ class AIChatPanel(QWidget):
     # ------------------------------------------------------------------
 
     def _on_response(self, text):
+        self._response_timer.stop()
         self._append_agent_message(text or "")
         self._set_busy(False)
 
     def _on_tool_call_started(self, name, _input_json):
         _ = get_app()._tr
         self.status_label.setText(_("Using tool: {}").format(name))
+        # A tool call means the agent is alive and making progress - give it
+        # a fresh window instead of timing out mid-task.
+        self._response_timer.start(RESPONSE_TIMEOUT_MS)
 
     def _on_error(self, message):
+        self._response_timer.stop()
         _ = get_app()._tr
         self._append_system_message(_("Error: {}").format(message))
+        self._set_busy(False)
+
+    def _on_response_timeout(self):
+        _ = get_app()._tr
+        self._append_system_message(
+            _("No response after {}s - the request may have failed silently. "
+              "You can try again.").format(RESPONSE_TIMEOUT_MS // 1000)
+        )
         self._set_busy(False)
 
     # ------------------------------------------------------------------
